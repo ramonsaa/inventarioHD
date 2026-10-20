@@ -4,495 +4,285 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventario Móvil - FW/HG</title>
-    <!-- Librería para el Escáner QR de la cámara -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        :root {
-            --primary: #2c3e50;
-            --secondary: #34495e;
-            --accent: #3498db;
-            --success: #27ae60;
-            --danger: #e74c3c;
-            --light: #f4f7f6;
-            --dark: #2c3e50;
-        }
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        :root { --primary: #2c3e50; --secondary: #34495e; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --light: #f4f7f6; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { margin: 0; background-color: var(--light); color: #333; overflow-x: hidden; display: flex; flex-direction: column; height: 100vh; }
-        
-        /* Login Screen */
         #login-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
-        .login-box { background: white; padding: 30px 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 400px; text-align: center; }
+        .login-box { background: white; padding: 30px 20px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center; }
         .login-box input { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
         .login-box button { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 15px; }
-
-        /* Topbar */
-        .topbar { background: var(--primary); color: white; padding: 15px; text-align: center; font-size: 1.2em; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        
-        /* Main Content */
+        .topbar { background: var(--primary); color: white; padding: 15px; text-align: center; font-size: 1.2em; font-weight: bold; position: sticky; top: 0; z-index: 100; }
         .content-area { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 80px; }
-        .section { display: none; animation: fadeIn 0.3s; }
-        .section.active { display: block; }
+        .section { display: none; animation: fadeIn 0.3s; } .section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* Cards */
         .card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .card-title { font-size: 1.1em; font-weight: bold; color: var(--primary); margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px; }
-        
-        /* Scanner Area */
         #qr-reader { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 15px; border: 2px solid var(--accent); }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; color: white; text-align: center; margin-bottom: 10px; }
-        .btn-success { background: var(--success); }
-        .btn-danger { background: var(--danger); }
-        .btn-secondary { background: var(--secondary); }
-
-        /* Inventory List Mobile */
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; color: white; margin-bottom: 10px; }
+        .btn-success { background: var(--success); } .btn-danger { background: var(--danger); } .btn-secondary { background: var(--secondary); }
         .inv-item { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
-        .inv-item:last-child { border-bottom: none; }
-        .inv-folio { font-size: 1.1em; font-weight: bold; color: var(--primary); }
-        .inv-sku { font-size: 0.9em; color: #666; }
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; }
-        .badge-almacen { background: #d4edda; color: #155724; }
-
-        /* Bottom Nav */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { flex: 1; text-align: center; padding: 12px 0; color: #7f8c8d; font-size: 0.8em; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.2s; }
+        .inv-folio { font-size: 1.1em; font-weight: bold; color: var(--primary); } .inv-sku { font-size: 0.9em; color: #666; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; background: #d4edda; color: #155724; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; text-align: center; padding: 12px 0; color: #7f8c8d; font-size: 0.8em; font-weight: bold; display: flex; flex-direction: column; align-items: center; transition: 0.2s; }
         .nav-item.active { color: var(--accent); border-top: 3px solid var(--accent); }
         .nav-icon { font-size: 1.5em; margin-bottom: 3px; }
-
-        /* Modals (Toast & Confirm) */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
-        .modal-box { background: white; border-radius: 12px; padding: 25px; text-align: center; width: 100%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .toast-icon { font-size: 3em; margin-bottom: 10px; }
-        .toast-title { font-size: 1.3em; font-weight: bold; margin-bottom: 10px; }
-        .toast-msg { color: #555; margin-bottom: 20px; line-height: 1.4; }
+        .modal-box { background: white; border-radius: 12px; padding: 25px; text-align: center; width: 100%; max-width: 350px; }
+        .progress-wrapper { width: 100%; background: #e0e0e0; border-radius: 8px; height: 25px; margin: 15px 0; overflow: hidden; position: relative; }
+        .progress-fill { height: 100%; background: var(--success); width: 0%; transition: width 0.3s; }
+        .progress-text { position: absolute; width: 100%; text-align: center; top: 3px; font-weight: bold; color: #333; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
-    <!-- Login -->
     <div id="login-screen">
         <div class="login-box">
             <h2 style="color:var(--primary); margin-top:0;">Terminal Móvil</h2>
-            <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">App de Operadores y Auditoría</p>
             <input type="email" id="login-email" placeholder="Correo electrónico">
             <input type="password" id="login-pass" placeholder="Contraseña">
             <button id="btn-login">Iniciar Sesión</button>
-            <p id="login-error" style="color: red; display: none; font-size: 0.9em; margin-top: 15px;">Credenciales incorrectas.</p>
+            <p id="login-error" style="color: red; display: none; font-size: 0.9em;">Error de acceso.</p>
         </div>
     </div>
 
-    <!-- Topbar -->
     <div class="topbar" id="topbar-title">Escáner de Salidas</div>
 
-    <!-- Contenido Principal -->
     <div class="content-area" id="app-layout" style="display: none;">
         
-        <!-- Sección: Salidas (Escáner) -->
         <div id="sec-salidas" class="section active">
             <div class="card">
-                <h3 class="card-title">Registrar Salida de Material</h3>
+                <h3 class="card-title">Escáner Físico</h3>
                 <div id="qr-reader"></div>
-                <button id="btn-toggle-camera" class="btn btn-secondary">Activar / Pausar Cámara</button>
-                
-                <div style="margin-top: 15px;">
-                    <p style="font-size: 0.9em; color: #666; text-align: center;">O ingresa el folio manualmente:</p>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="manual-folio" placeholder="Ej. FW000100" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:8px; font-size: 16px; text-transform: uppercase;">
-                        <button id="btn-manual-salida" class="btn btn-success" style="width:auto; margin:0;">Validar</button>
-                    </div>
+                <button id="btn-toggle-camera" class="btn btn-secondary">Activar Cámara</button>
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <input type="text" id="manual-folio" placeholder="Folio manual (FW00100)" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:8px; text-transform: uppercase;">
+                    <button id="btn-manual-salida" class="btn btn-success" style="width:auto; margin:0;">Ir</button>
                 </div>
             </div>
         </div>
 
-        <!-- Sección: Inventario (Solo lectura) -->
         <div id="sec-inventario" class="section">
             <div class="card">
-                <h3 class="card-title">Búsqueda de Existencias</h3>
-                <input type="text" id="search-inv" placeholder="Buscar SKU o Folio..." style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size: 16px; margin-bottom: 15px;">
-                <div id="inv-list"><p style="text-align: center; color: #999;">Cargando inventario...</p></div>
+                <h3 class="card-title">Inventario</h3>
+                <input type="text" id="search-inv" placeholder="Buscar SKU..." style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;">
+                <div id="inv-list"></div>
             </div>
         </div>
 
-        <!-- Sección: Auditoría (Solo Admins) -->
         <div id="sec-auditoria" class="section">
             <div class="card">
-                <h3 class="card-title">Auditoría Física</h3>
-                <p style="font-size: 0.85em; color: #666; margin-bottom: 15px;">Escanea las etiquetas para confirmar que el producto sigue físicamente en su ubicación.</p>
-                <div id="audit-indicator" style="background: #e8f8f5; color: #1abc9c; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; display: none;">
-                    ✅ Listo para auditar. Use la pestaña de escáner.
+                <h3 class="card-title">Auditoría en Curso</h3>
+                <p style="font-size: 0.85em; color: #666;">El progreso se actualiza en tiempo real con todos los dispositivos conectados.</p>
+                
+                <div class="progress-wrapper">
+                    <div id="audit-progress-bar-mobile" class="progress-fill"></div>
+                    <div id="audit-progress-text-mobile" class="progress-text">Cargando progreso...</div>
                 </div>
-                <p style="text-align: center; color: var(--danger); font-weight: bold;">⚠️ Para auditar, ve a la pestaña "Escáner" e inicia la cámara.</p>
+
+                <div style="background: #e8f8f5; color: #1abc9c; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 15px;">
+                    Ve a "Escáner" y lee las etiquetas.
+                </div>
             </div>
         </div>
 
-        <!-- Sección: Perfil -->
         <div id="sec-perfil" class="section">
             <div class="card" style="text-align: center;">
-                <h3 class="card-title">Mi Cuenta</h3>
                 <div style="font-size: 4em; margin: 20px 0;">👤</div>
-                <h3 id="profile-email" style="margin: 0; color: var(--primary);">correo@huellaglobal.com</h3>
-                <p id="profile-role" style="color: #7f8c8d; font-weight: bold;">Rol: Cargando...</p>
-                <hr style="border:0; border-top: 1px solid #eee; margin: 20px 0;">
-                <button id="btn-logout" class="btn btn-danger">Cerrar Sesión</button>
+                <h3 id="profile-email" style="margin: 0; color: var(--primary);">correo</h3>
+                <p id="profile-role" style="color: #7f8c8d; font-weight: bold;"></p>
+                <button id="btn-logout" class="btn btn-danger" style="margin-top:20px;">Cerrar Sesión</button>
             </div>
         </div>
     </div>
 
-    <!-- Bottom Navigation -->
     <div class="bottom-nav" id="bottom-nav" style="display: none;">
         <div class="nav-item active" data-target="sec-salidas" data-title="Escáner"><div class="nav-icon">📷</div>Escáner</div>
         <div class="nav-item" data-target="sec-inventario" data-title="Inventario"><div class="nav-icon">📦</div>Inventario</div>
-        <div class="nav-item" id="nav-auditoria" data-target="sec-auditoria" data-title="Auditoría" style="display: none;"><div class="nav-icon">📋</div>Auditoría</div>
+        <div class="nav-item" id="nav-auditoria" data-target="sec-auditoria" data-title="Auditoría Móvil" style="display: none;"><div class="nav-icon">📋</div>Auditoría</div>
         <div class="nav-item" data-target="sec-perfil" data-title="Mi Perfil"><div class="nav-icon">⚙️</div>Perfil</div>
     </div>
 
-    <!-- Modal de Confirmación de Salida (NUEVO) -->
+    <!-- Modales -->
     <div class="modal-overlay" id="modal-confirmacion">
         <div class="modal-box" style="text-align: left;">
-            <h3 style="margin-top:0; color: var(--primary); text-align: center;">Detalles del Ítem</h3>
-            
-            <div id="confirm-details" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 0.95em; border: 1px solid #eee;">
-                <!-- Datos inyectados por JS -->
-            </div>
-            
-            <div id="fifo-warning" style="margin-bottom: 20px; font-size: 0.9em; padding: 10px; border-radius: 6px;">
-                <!-- Advertencia FIFO inyectada por JS -->
-            </div>
-            
+            <h3 style="margin-top:0; color: var(--primary); text-align: center;">Detalles de Salida</h3>
+            <div id="confirm-details" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee;"></div>
+            <div id="fifo-warning" style="margin-bottom: 20px; font-size: 0.9em; padding: 10px; border-radius: 6px;"></div>
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-secondary" id="btn-cancelar-salida" style="margin:0; width: 40%;">Cancelar</button>
-                <button class="btn btn-success" id="btn-confirmar-salida" style="margin:0; width: 60%;">Confirmar Salida</button>
+                <button class="btn btn-success" id="btn-confirmar-salida" style="margin:0; width: 60%;">Despachar</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Alertas Estándar (Toast) -->
     <div class="modal-overlay" id="custom-toast">
         <div class="modal-box">
-            <div id="toast-icon" class="toast-icon">✅</div>
-            <div id="toast-title" class="toast-title">Éxito</div>
-            <div id="toast-msg" class="toast-msg">Mensaje descriptivo.</div>
-            <button id="btn-toast-close" class="btn btn-primary" style="margin-bottom:0;">Entendido</button>
+            <div id="toast-icon" style="font-size:3em;">✅</div>
+            <div id="toast-title" style="font-size:1.3em; font-weight:bold;">Éxito</div>
+            <div id="toast-msg" style="color:#555; margin:15px 0;">Mensaje.</div>
+            <button id="btn-toast-close" class="btn btn-primary" style="margin:0;">Ok</button>
         </div>
     </div>
 
-    <!-- Firebase SDK Modular -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
-        import { getFirestore, collection, doc, getDoc, getDocs, query, where, orderBy, limit, serverTimestamp, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDoc, getDocs, query, where, orderBy, limit, serverTimestamp, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyA13ZFjG31lY6y43oDjGq2sCsLCr3Ea4co",
-            authDomain: "inventario-fwhd.firebaseapp.com",
-            projectId: "inventario-fwhd",
-            storageBucket: "inventario-fwhd.firebasestorage.app",
-            messagingSenderId: "320759277573",
-            appId: "1:320759277573:web:e9d61d49ebef9a4018d46c"
-        };
+        const firebaseConfig = { apiKey: "AIzaSyA13ZFjG31lY6y43oDjGq2sCsLCr3Ea4co", authDomain: "inventario-fwhd.firebaseapp.com", projectId: "inventario-fwhd", storageBucket: "inventario-fwhd.firebasestorage.app", messagingSenderId: "320759277573", appId: "1:320759277573:web:e9d61d49ebef9a4018d46c" };
+        const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db = getFirestore(app);
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        let currentUser = null; let isUserAdmin = false;
+        let html5QrcodeScanner = null; let isScanning = false; let currentMode = 'SALIDA'; let isProcessingScan = false; let folioPendiente = null;
+        let unsuscribeAuditoria = null;
 
-        const ADMIN_EMAILS = ['ramon@huellaglobal.com', 'sandra@huellaglobal.com', 'admin@huellaglobal.com'];
-        let currentUser = null;
-        let isUserAdmin = false;
-        
-        // Estado del escáner y variables de bloqueo
-        let html5QrcodeScanner = null;
-        let isScanning = false;
-        let currentMode = 'SALIDA'; 
-        let isProcessingScan = false; // Bloquea lecturas múltiples de la cámara
-        let folioPendienteSalida = null; // Almacena el folio mientras se confirma
-
-        // UI Elements
-        const titleEl = document.getElementById('topbar-title');
-        const sections = document.querySelectorAll('.section');
-        const navItems = document.querySelectorAll('.nav-item');
-
-        // Modal de Alertas
         function showToast(title, msg, type = 'success') {
-            document.getElementById('toast-title').textContent = title;
-            document.getElementById('toast-msg').textContent = msg;
-            const icon = document.getElementById('toast-icon');
-            const btn = document.getElementById('btn-toast-close');
-            
+            document.getElementById('toast-title').textContent = title; document.getElementById('toast-msg').textContent = msg;
+            const icon = document.getElementById('toast-icon'); const btn = document.getElementById('btn-toast-close');
             if(type === 'success') { icon.textContent = '✅'; btn.style.background = 'var(--success)'; }
             else if(type === 'error') { icon.textContent = '❌'; btn.style.background = 'var(--danger)'; }
-            else if(type === 'warning') { icon.textContent = '⚠️'; btn.style.background = '#f39c12'; }
-            
+            else { icon.textContent = '⚠️'; btn.style.background = '#f39c12'; }
             document.getElementById('custom-toast').style.display = 'flex';
         }
+        function resetScanner() { isProcessingScan = false; if(html5QrcodeScanner && html5QrcodeScanner.getState && html5QrcodeScanner.getState() === 3) html5QrcodeScanner.resume(); }
 
-        // Restablecer el escáner cuando se cierra un modal
-        function resetScanner() {
-            isProcessingScan = false;
-            // Si la librería soporta resume, lo aplicamos
-            if(html5QrcodeScanner && html5QrcodeScanner.getState && html5QrcodeScanner.getState() === 3) {
-                html5QrcodeScanner.resume();
-            }
-        }
+        document.getElementById('btn-toast-close').addEventListener('click', () => { document.getElementById('custom-toast').style.display = 'none'; resetScanner(); });
 
-        document.getElementById('btn-toast-close').addEventListener('click', () => {
-            document.getElementById('custom-toast').style.display = 'none';
-            document.getElementById('manual-folio').value = '';
-            resetScanner();
-        });
-
-        // Navegación Bottom
-        navItems.forEach(item => {
+        document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
-                navItems.forEach(ni => ni.classList.remove('active'));
-                sections.forEach(sec => sec.classList.remove('active'));
-                item.classList.add('active');
-                document.getElementById(item.dataset.target).classList.add('active');
-                titleEl.textContent = item.dataset.title;
+                document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+                item.classList.add('active'); document.getElementById(item.dataset.target).classList.add('active');
+                document.getElementById('topbar-title').textContent = item.dataset.title;
 
-                if(item.dataset.target === 'sec-auditoria') {
-                    currentMode = 'AUDITORIA'; titleEl.textContent = "Auditoría Física";
-                    setTimeout(() => { document.querySelector('[data-target="sec-salidas"]').click(); titleEl.textContent = "Escaneando Auditoría"; }, 1000);
-                } else if(item.dataset.target === 'sec-salidas') {
-                    currentMode = 'SALIDA';
-                }
-
+                if(item.dataset.target === 'sec-auditoria') { currentMode = 'AUDITORIA'; document.getElementById('topbar-title').textContent = "Visualizando Progreso..."; } 
+                else if(item.dataset.target === 'sec-salidas') { currentMode = 'SALIDA'; }
                 if(item.dataset.target === 'sec-inventario') cargarInventarioMovil();
             });
         });
 
-        // --- LÓGICA DE ESCÁNER (CORREGIDA) ---
-        function initScanner() {
-            if(!html5QrcodeScanner) {
-                // Configuramos para que no envíe el mismo código dos veces seguidas muy rápido
-                html5QrcodeScanner = new Html5Qrcode("qr-reader");
-            }
-        }
-
-        async function onScanSuccess(decodedText) {
-            // Evita que un código se procese 20 veces mientras el modal está abierto
-            if(isProcessingScan) return;
-            isProcessingScan = true; 
-            
-            // Pausa el escaneo visualmente si la versión de la librería lo permite
-            if(html5QrcodeScanner && html5QrcodeScanner.getState && html5QrcodeScanner.getState() === 2) {
-                html5QrcodeScanner.pause(true);
-            }
-
-            const folio = decodedText.trim().toUpperCase();
-            
-            if(currentMode === 'SALIDA') {
-                await prepararSalida(folio);
-            } else if (currentMode === 'AUDITORIA') {
-                await procesarAuditoria(folio);
-            }
-        }
-
-        document.getElementById('btn-toggle-camera').addEventListener('click', () => {
-            initScanner();
-            if(isScanning) {
-                html5QrcodeScanner.stop().then(() => { isScanning = false; }).catch(e => console.log(e));
-            } else {
-                html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 250, height: 250} }, onScanSuccess)
-                .then(() => { isScanning = true; })
-                .catch(err => showToast("Error de Cámara", "No se pudo acceder a la cámara. Revisa los permisos.", "error"));
-            }
-        });
-
-        document.getElementById('btn-manual-salida').addEventListener('click', () => {
-            if(isProcessingScan) return;
-            const f = document.getElementById('manual-folio').value.trim().toUpperCase();
-            if(f) {
-                isProcessingScan = true;
-                if(currentMode === 'SALIDA') prepararSalida(f);
-                else procesarAuditoria(f);
-            }
-        });
-
-        // --- VALIDACIÓN FIFO Y CONFIRMACIÓN UI (NUEVO) ---
-        async function prepararSalida(folioEscaneado) {
-            try {
-                const docRef = doc(db, "items", folioEscaneado);
-                const docSnap = await getDoc(docRef);
-
-                if(!docSnap.exists()) {
-                    showToast("Folio Inexistente", `El código ${folioEscaneado} no está registrado.`, "error");
-                    return resetScanner();
-                }
-
-                const data = docSnap.data();
-
-                if(data.estado !== 'en_almacen') {
-                    showToast("No Disponible", `El folio ${folioEscaneado} ya está '${data.estado}'.`, "warning");
-                    return resetScanner();
-                }
-
-                const sku = data.sku_ref;
-
-                // Consulta FIFO: Buscar el folio más viejo del mismo producto
-                const qOldest = query(collection(db, "items"), 
-                    where("sku_ref", "==", sku), 
-                    where("estado", "==", "en_almacen"), 
-                    orderBy("folio", "asc"), 
-                    limit(1)
-                );
-
-                let oldestData = data; 
-                try {
-                    const snapOldest = await getDocs(qOldest);
-                    if(!snapOldest.empty) oldestData = snapOldest.docs[0].data();
-                } catch(e) { console.warn("Falta índice compuesto, validando advertencia."); }
-
-                // Llenar datos en el Modal
-                const detallesHtml = `
-                    <b>Folio:</b> ${data.folio} <br>
-                    <b>SKU:</b> ${data.sku_ref} <br>
-                    <b>Lote:</b> ${data.lote || 'Sin asignar'} <br>
-                    <b>Ubicación:</b> ${data.ubicacion || 'Sin asignar'} <br>
-                    <b>Ingreso:</b> ${data.fecha_ingreso ? data.fecha_ingreso.toDate().toLocaleDateString() : 'Desconocido'}
-                `;
-                document.getElementById('confirm-details').innerHTML = detallesHtml;
-
-                const fifoDiv = document.getElementById('fifo-warning');
-                const btnConfirm = document.getElementById('btn-confirmar-salida');
-
-                // Validar si es el correcto o si bloqueamos
-                if(oldestData.folio === data.folio) {
-                    fifoDiv.innerHTML = "✅ FIFO Correcto: Escaneaste el lote más antiguo en existencia. Seguro para despachar.";
-                    fifoDiv.style.background = "#d4edda"; fifoDiv.style.color = "#155724"; fifoDiv.style.border = "1px solid #c3e6cb";
-                    btnConfirm.style.display = "block";
-                } else {
-                    fifoDiv.innerHTML = `<b>❌ ALERTA FIFO:</b> Existe material más antiguo en almacén.<br><br>
-                        <b>Debes despachar primero:</b><br>
-                        Folio: <span style="font-size:1.2em;">${oldestData.folio}</span><br>
-                        Lote: ${oldestData.lote || '-'}<br>
-                        Ubicación: ${oldestData.ubicacion || 'No registrada'}`;
-                    fifoDiv.style.background = "#f8d7da"; fifoDiv.style.color = "#721c24"; fifoDiv.style.border = "1px solid #f5c6cb";
-                    btnConfirm.style.display = "none"; // Bloqueo estricto del botón
-                }
-
-                folioPendienteSalida = data.folio;
-                document.getElementById('modal-confirmacion').style.display = 'flex';
-
-            } catch (error) {
-                showToast("Error de conexión", error.message, "error");
-                resetScanner();
-            }
-        }
-
-        // Acciones del Modal de Confirmación
-        document.getElementById('btn-cancelar-salida').addEventListener('click', () => {
-            document.getElementById('modal-confirmacion').style.display = 'none';
-            document.getElementById('manual-folio').value = '';
-            resetScanner();
-        });
-
-        document.getElementById('btn-confirmar-salida').addEventListener('click', async () => {
-            const btn = document.getElementById('btn-confirmar-salida');
-            btn.textContent = "Procesando..."; btn.disabled = true;
-            
-            try {
-                const docRef = doc(db, "items", folioPendienteSalida);
-                const docSnap = await getDoc(docRef);
-                const sku = docSnap.data().sku_ref;
-
-                // Ejecutar actualización
-                await updateDoc(docRef, { estado: 'despachado' });
-                
-                await addDoc(collection(db, "movimientos"), {
-                    accion: "SALIDA_INVENTARIO", usuario: currentUser.email, fecha: serverTimestamp(),
-                    detalles: `Folio despachado en app móvil: ${folioPendienteSalida} (SKU: ${sku})`
-                });
-
-                document.getElementById('modal-confirmacion').style.display = 'none';
-                showToast("Salida Exitosa", `El folio ${folioPendienteSalida} se ha despachado del almacén.`, "success");
-            } catch(error) {
-                showToast("Error", "No se pudo completar la salida.", "error");
-            }
-            
-            btn.textContent = "Confirmar Salida"; btn.disabled = false;
-            document.getElementById('manual-folio').value = '';
-            // El resetScanner se ejecuta cuando se cierra el toast de éxito
-        });
-
-        // --- AUDITORÍA MÓVIL ---
-        async function procesarAuditoria(folioEscaneado) {
-            try {
-                const docRef = doc(db, "items", folioEscaneado);
-                const docSnap = await getDoc(docRef);
-                
-                if(docSnap.exists()) {
-                    const data = docSnap.data();
-                    if(data.estado !== 'en_almacen') { 
-                        showToast("Atención", `El folio ${folioEscaneado} no debería estar en almacén (Está ${data.estado}).`, "error");
-                    } else if(data.auditado) { 
-                        showToast("Ya Auditado", `El folio ${folioEscaneado} ya fue escaneado previamente en esta auditoría.`, "warning");
-                    } else {
-                        await updateDoc(docRef, { auditado: true });
-                        showToast("Confirmado", `Folio ${folioEscaneado} verificado físicamente en almacén.`, "success");
-                    }
-                } else { 
-                    showToast("Error", `El folio ${folioEscaneado} no existe en la base de datos.`, "error");
-                }
-            } catch(error) { showToast("Error", error.message, "error"); resetScanner(); }
-        }
-
-        // --- INVENTARIO MÓVIL (Solo Lectura) ---
-        async function cargarInventarioMovil() {
-            const termino = document.getElementById('search-inv').value.toUpperCase();
-            const listContainer = document.getElementById('inv-list');
-            listContainer.innerHTML = '<p style="text-align: center; color: #999;">Cargando...</p>';
-            try {
-                const q = query(collection(db, "items"), where("estado", "==", "en_almacen"), limit(50));
-                const snap = await getDocs(q);
-                listContainer.innerHTML = '';
-                if(snap.empty) { listContainer.innerHTML = '<p style="text-align: center;">No hay existencias.</p>'; return; }
-
-                snap.forEach(docSnap => {
-                    const d = docSnap.data();
-                    if(termino && !d.folio.includes(termino) && !d.sku_ref.includes(termino)) return;
-                    listContainer.innerHTML += `
-                        <div class="inv-item">
-                            <div><div class="inv-folio">${d.folio}</div><div class="inv-sku">Prod: ${d.sku_ref} | Lote: ${d.lote || '-'}</div></div>
-                            <div><span class="badge badge-almacen">${d.ubicacion || 'Sin Ubi'}</span></div>
-                        </div>
-                    `;
-                });
-            } catch (e) { listContainer.innerHTML = '<p style="text-align:center; color:red;">Error de conexión.</p>'; }
-        }
-        document.getElementById('search-inv').addEventListener('input', () => {
-            clearTimeout(window.searchTimeout); window.searchTimeout = setTimeout(cargarInventarioMovil, 500);
-        });
-
-        // --- AUTH LÓGICA ---
-        onAuthStateChanged(auth, (user) => {
+        // --- AUTH Y LECTURA DE ROLES DINÁMICA ---
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // Verificar Rol en base de datos
+                const userDoc = await getDoc(doc(db, "usuarios", user.email));
+                let role = 'operador';
+                
+                if(user.email === 'ramon@huellaglobal.com' || user.email === 'sandra@huellaglobal.com') { role = 'admin'; } 
+                else if(userDoc.exists()) { role = userDoc.data().rol; }
+
+                isUserAdmin = (role === 'admin');
                 currentUser = user;
-                isUserAdmin = ADMIN_EMAILS.includes(user.email);
+                
                 document.getElementById('profile-email').textContent = user.email;
-                document.getElementById('profile-role').textContent = isUserAdmin ? "Rol: Administrador" : "Rol: Operador (Salidas)";
-                if(isUserAdmin) document.getElementById('nav-auditoria').style.display = 'flex';
+                document.getElementById('profile-role').textContent = isUserAdmin ? "Rol: Administrador (Auditoría Habilitada)" : "Rol: Operador de Almacén";
+                
+                // Mostrar/Ocultar Auditoría según rol
+                if(isUserAdmin) {
+                    document.getElementById('nav-auditoria').style.display = 'flex';
+                    iniciarEscuchaAuditoria(); // Conectar socket de progreso
+                }
 
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-layout').style.display = 'block';
                 document.getElementById('bottom-nav').style.display = 'flex';
             } else {
                 currentUser = null;
+                if(unsuscribeAuditoria) unsuscribeAuditoria();
                 if(isScanning && html5QrcodeScanner) html5QrcodeScanner.stop();
-                document.getElementById('login-screen').style.display = 'flex';
-                document.getElementById('app-layout').style.display = 'none';
-                document.getElementById('bottom-nav').style.display = 'none';
+                document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-layout').style.display = 'none'; document.getElementById('bottom-nav').style.display = 'none';
             }
         });
 
-        document.getElementById('btn-login').addEventListener('click', async () => {
-            const btn = document.getElementById('btn-login');
-            btn.textContent = "Cargando..."; btn.disabled = true;
-            try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value); document.getElementById('login-error').style.display = 'none'; } 
-            catch (e) { document.getElementById('login-error').style.display = 'block'; }
-            btn.textContent = "Iniciar Sesión"; btn.disabled = false;
-        });
+        document.getElementById('btn-login').addEventListener('click', async () => { try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value); } catch (e) { document.getElementById('login-error').style.display = 'block'; } });
         document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
 
+        // --- ESCUCHA DE AUDITORÍA (TIEMPO REAL) ---
+        function iniciarEscuchaAuditoria() {
+            if(unsuscribeAuditoria) unsuscribeAuditoria();
+            const q = query(collection(db, "items"), where("estado", "==", "en_almacen"));
+            unsuscribeAuditoria = onSnapshot(q, (snapshot) => {
+                let total = snapshot.size; let auditados = 0;
+                snapshot.forEach(d => { if(d.data().auditado) auditados++; });
+                const pct = total === 0 ? 0 : Math.round((auditados / total) * 100);
+                document.getElementById('audit-progress-bar-mobile').style.width = `${pct}%`; 
+                document.getElementById('audit-progress-text-mobile').textContent = `${auditados} / ${total} (${pct}%)`;
+            });
+        }
+
+        // --- ESCÁNER ---
+        document.getElementById('btn-toggle-camera').addEventListener('click', () => {
+            if(!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("qr-reader");
+            if(isScanning) { html5QrcodeScanner.stop().then(() => { isScanning = false; document.getElementById('btn-toggle-camera').textContent="Activar Cámara"; }); } 
+            else { html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 250, height: 250} }, async (text) => {
+                if(isProcessingScan) return; isProcessingScan = true; 
+                if(html5QrcodeScanner && html5QrcodeScanner.getState() === 2) html5QrcodeScanner.pause(true);
+                const folio = text.trim().toUpperCase();
+                if(currentMode === 'SALIDA') await prepararSalida(folio); else await procesarAuditoria(folio);
+            }).then(() => { isScanning = true; document.getElementById('btn-toggle-camera').textContent="Pausar Cámara"; }); }
+        });
+
+        document.getElementById('btn-manual-salida').addEventListener('click', () => {
+            if(isProcessingScan) return; const f = document.getElementById('manual-folio').value.trim().toUpperCase();
+            if(f) { isProcessingScan = true; if(currentMode === 'SALIDA') prepararSalida(f); else procesarAuditoria(f); }
+        });
+
+        // --- LÓGICAS (FIFO Y AUDITORÍA) ---
+        async function prepararSalida(folio) {
+            try {
+                const docSnap = await getDoc(doc(db, "items", folio));
+                if(!docSnap.exists()) { showToast("Error", "Folio no registrado.", "error"); return resetScanner(); }
+                const data = docSnap.data();
+                if(data.estado !== 'en_almacen') { showToast("Error", `El folio está ${data.estado}.`, "warning"); return resetScanner(); }
+                
+                const qOldest = query(collection(db, "items"), where("sku_ref", "==", data.sku_ref), where("estado", "==", "en_almacen"), orderBy("folio", "asc"), limit(1));
+                let oldestData = data; try { const snapOldest = await getDocs(qOldest); if(!snapOldest.empty) oldestData = snapOldest.docs[0].data(); } catch(e){}
+
+                document.getElementById('confirm-details').innerHTML = `<b>Folio:</b> ${data.folio} <br><b>SKU:</b> ${data.sku_ref} <br><b>Ubicación:</b> ${data.ubicacion||'-'}`;
+                const fifoDiv = document.getElementById('fifo-warning'); const btn = document.getElementById('btn-confirmar-salida');
+                
+                if(oldestData.folio === data.folio) {
+                    fifoDiv.innerHTML = "✅ FIFO Correcto."; fifoDiv.style.background = "#d4edda"; fifoDiv.style.color = "#155724"; btn.style.display = "block";
+                } else {
+                    fifoDiv.innerHTML = `<b>❌ ALERTA FIFO:</b> Debes sacar primero:<br>Folio: <b>${oldestData.folio}</b> (Ubi: ${oldestData.ubicacion||'-'})`;
+                    fifoDiv.style.background = "#f8d7da"; fifoDiv.style.color = "#721c24"; btn.style.display = "none";
+                }
+                folioPendiente = data.folio; document.getElementById('modal-confirmacion').style.display = 'flex';
+            } catch (e) { showToast("Error", e.message, "error"); resetScanner(); }
+        }
+
+        document.getElementById('btn-cancelar-salida').addEventListener('click', () => { document.getElementById('modal-confirmacion').style.display = 'none'; resetScanner(); });
+        document.getElementById('btn-confirmar-salida').addEventListener('click', async () => {
+            await updateDoc(doc(db, "items", folioPendiente), { estado: 'despachado' });
+            await addDoc(collection(db, "movimientos"), { accion: "SALIDA", usuario: currentUser.email, fecha: serverTimestamp(), detalles: `Folio despachado: ${folioPendiente}` });
+            document.getElementById('modal-confirmacion').style.display = 'none'; showToast("Éxito", "Despachado correctamente.");
+        });
+
+        async function procesarAuditoria(folio) {
+            try {
+                const docSnap = await getDoc(doc(db, "items", folio));
+                if(docSnap.exists()) {
+                    const data = docSnap.data();
+                    if(data.estado !== 'en_almacen') showToast("Error", `Folio ${data.estado}.`, "error");
+                    else if(data.auditado) showToast("Aviso", "Ya escaneado.", "warning");
+                    else { await updateDoc(doc(db, "items", folio), { auditado: true }); showToast("Confirmado", `${folio} validado.`, "success"); }
+                } else showToast("Error", "No existe.", "error");
+            } catch(e) { showToast("Error", e.message, "error"); resetScanner(); }
+        }
+
+        async function cargarInventarioMovil() {
+            const term = document.getElementById('search-inv').value.toUpperCase(); const list = document.getElementById('inv-list');
+            try {
+                const snap = await getDocs(query(collection(db, "items"), where("estado", "==", "en_almacen"), limit(50))); list.innerHTML = '';
+                snap.forEach(d => { const data = d.data(); if(term && !data.folio.includes(term) && !data.sku_ref.includes(term)) return;
+                    list.innerHTML += `<div class="inv-item"><div><div class="inv-folio">${data.folio}</div><div class="inv-sku">${data.sku_ref} | Ubi: ${data.ubicacion||'-'}</div></div></div>`;
+                });
+            } catch(e){}
+        }
+        document.getElementById('search-inv').addEventListener('input', () => { clearTimeout(window.t); window.t = setTimeout(cargarInventarioMovil, 500); });
     </script>
 </body>
 </html>

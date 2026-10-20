@@ -241,10 +241,10 @@
                     <div class="grid-2">
                         <!-- Formulario de Nuevo Producto -->
                         <div class="card" style="margin-bottom: 0;">
-                            <h4 style="margin-top:0;">Agregar Producto al Catálogo</h4>
+                            <h4 id="cat-form-title" style="margin-top:0;">Agregar Producto al Catálogo</h4>
                             
                             <div class="form-group">
-                                <label>ID Interno / SKU</label>
+                                <label>ID Interno / SKU (No modificable al editar)</label>
                                 <input type="text" id="cat-sku" class="form-control" placeholder="Ej. FW40-5G">
                             </div>
                             
@@ -289,7 +289,10 @@
                                 <textarea id="cat-descripcion" class="form-control" placeholder="Limpiador alcalino para anilox, mezcla 50/50..."></textarea>
                             </div>
 
-                            <button id="btn-save-producto" class="btn btn-success" style="width: 100%;">Guardar Producto</button>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="btn-cancelar-cat" class="btn" style="background: #95a5a6; display: none; width: 50%;">Cancelar Edición</button>
+                                <button id="btn-save-producto" class="btn btn-success" style="width: 100%;">Guardar Producto</button>
+                            </div>
                         </div>
 
                         <!-- Tabla de Catálogo -->
@@ -305,6 +308,7 @@
                                             <th>SKU / Nombre</th>
                                             <th>Presentación</th>
                                             <th>Info Técnica</th>
+                                            <th>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -320,10 +324,14 @@
 
     <!-- Modal Editar Ítem -->
     <div id="modal-editar" class="modal-overlay">
-        <!-- ... (código del modal intacto) ... -->
         <div class="modal">
             <h3 style="margin-top:0;">Editar Ítem: <span id="edit-folio-title"></span></h3>
             <input type="hidden" id="edit-folio-id">
+            
+            <div class="form-group">
+                <label>Producto Asignado (Reasignar Folio)</label>
+                <select id="edit-producto" class="form-control"></select>
+            </div>
             <div class="form-group">
                 <label>Estado</label>
                 <select id="edit-estado" class="form-control">
@@ -381,7 +389,6 @@
             document.getElementById(targetId).classList.add('active');
             titleEl.textContent = title;
 
-            // Trigger specific loads
             if(targetId === 'sec-inventario') cargarInventario();
             if(targetId === 'sec-historial') cargarHistorial();
             if(targetId === 'sec-auditoria') actualizarProgresoAuditoria();
@@ -392,11 +399,8 @@
             item.addEventListener('click', () => switchSection(item.dataset.target, item.childNodes[0].textContent.trim()));
         });
 
-        // Global Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') cerrarModal();
-            
-            // Tab Navigation (Alt + 1-6)
             if (e.altKey) {
                 const tabs = ['sec-asignacion', 'sec-inventario', 'sec-auditoria', 'sec-reportes', 'sec-historial', 'sec-catalogo'];
                 const titles = ['Asignación de Folios', 'Inventario', 'Auditoría', 'Reportes', 'Historial', 'Catálogo de Productos'];
@@ -406,7 +410,6 @@
                     switchSection(tabs[index], titles[index]);
                 }
             }
-
             if (e.key === 'Enter') {
                 if (document.getElementById('login-screen').style.display !== 'none') {
                     document.getElementById('btn-login').click();
@@ -456,22 +459,57 @@
             const tbody = document.querySelector('#tabla-catalogo tbody');
             tbody.innerHTML = '';
             catalogoProductos.forEach(p => {
-                const sdsBtn = p.sds_link ? `<a href="${p.sds_link}" target="_blank" class="btn btn-primary btn-sm">Ver SDS</a>` : '<span style="color:#999; font-size:0.8em;">Sin SDS</span>';
-                const peligroBadge = p.peligro ? `<br><span class="badge badge-peligro">⚠️ ${p.peligro}</span>` : '';
+                const sdsBtn = p.sds_link ? `<a href="${p.sds_link}" target="_blank" class="btn btn-primary btn-sm" style="margin-bottom:5px;">Ver SDS</a>` : '<span style="color:#999; font-size:0.8em; display:block; margin-bottom:5px;">Sin SDS</span>';
+                const peligroBadge = p.peligro ? `<span class="badge badge-peligro">⚠️ ${p.peligro}</span>` : '';
                 
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${p.id}</strong><br><span style="color:#666;">[${p.empresa}] ${p.nombre}</span></td>
-                        <td>${p.presentacion}<br><small>${p.cantidad}</small></td>
-                        <td>${sdsBtn} ${peligroBadge} <br><small style="display:block; margin-top:5px;">${p.descripcion}</small></td>
+                        <td>${p.presentacion || '-'}<br><small>${p.cantidad || '-'}</small></td>
+                        <td>${sdsBtn} ${peligroBadge} <br><small style="display:block; margin-top:5px;">${p.descripcion || '-'}</small></td>
+                        <td><button class="btn btn-primary btn-sm" onclick="editarProductoCat('${p.id}')">Editar</button></td>
                     </tr>
                 `;
             });
-            // Reset dropdown to force reload if in Asignación
             document.getElementById('form-empresa').dispatchEvent(new Event('change'));
         }
 
         document.getElementById('btn-refresh-cat').addEventListener('click', cargarCatalogo);
+
+        // Lógica para editar un producto del catálogo
+        window.editarProductoCat = (sku) => {
+            const prod = catalogoProductos.find(p => p.id === sku);
+            if(!prod) return;
+            
+            document.getElementById('cat-form-title').textContent = "Editar Producto";
+            document.getElementById('cat-sku').value = prod.id;
+            document.getElementById('cat-sku').setAttribute('readonly', true); // Bloquear ID
+            document.getElementById('cat-sku').style.backgroundColor = '#e9ecef';
+            
+            document.getElementById('cat-empresa').value = prod.empresa;
+            document.getElementById('cat-nombre').value = prod.nombre;
+            document.getElementById('cat-presentacion').value = prod.presentacion || '';
+            document.getElementById('cat-cantidad').value = prod.cantidad || '';
+            document.getElementById('cat-peligro').value = prod.peligro || '';
+            document.getElementById('cat-sds').value = prod.sds_link || '';
+            document.getElementById('cat-descripcion').value = prod.descripcion || '';
+            
+            document.getElementById('btn-save-producto').textContent = 'Actualizar Producto';
+            document.getElementById('btn-save-producto').style.width = '50%';
+            document.getElementById('btn-cancelar-cat').style.display = 'inline-block';
+        };
+
+        function resetFormCatalogo() {
+            document.querySelectorAll('#sec-catalogo input, #sec-catalogo textarea').forEach(el => el.value = '');
+            document.getElementById('cat-form-title').textContent = "Agregar Producto al Catálogo";
+            document.getElementById('cat-sku').removeAttribute('readonly');
+            document.getElementById('cat-sku').style.backgroundColor = 'white';
+            document.getElementById('btn-save-producto').textContent = 'Guardar Producto';
+            document.getElementById('btn-save-producto').style.width = '100%';
+            document.getElementById('btn-cancelar-cat').style.display = 'none';
+        }
+
+        document.getElementById('btn-cancelar-cat').addEventListener('click', resetFormCatalogo);
 
         document.getElementById('btn-save-producto').addEventListener('click', async () => {
             const sku = document.getElementById('cat-sku').value.trim().toUpperCase();
@@ -490,15 +528,12 @@
             try {
                 await setDoc(doc(db, "catalogo", sku), prodData);
                 await addDoc(collection(db, "movimientos"), {
-                    accion: "ALTA_PRODUCTO", usuario: currentUser.email, fecha: serverTimestamp(),
-                    detalles: `Producto agregado/actualizado en catálogo: ${sku} (${prodData.nombre})`
+                    accion: "EDICION_CATALOGO", usuario: currentUser.email, fecha: serverTimestamp(),
+                    detalles: `Producto guardado/actualizado: ${sku} (${prodData.nombre})`
                 });
                 alert("Producto guardado exitosamente en el catálogo.");
-                
-                // Clear form
-                document.querySelectorAll('#sec-catalogo input, #sec-catalogo textarea').forEach(el => el.value = '');
-                
-                await cargarCatalogo(); // Refresh data
+                resetFormCatalogo();
+                await cargarCatalogo(); 
             } catch (e) {
                 alert("Error guardando producto: " + e.message);
             }
@@ -567,10 +602,7 @@
             finally { btn.disabled = false; btn.textContent = "Generar Folios e Imprimir (Enter)"; }
         });
 
-        // --- INVENTARIO, AUDITORIA, EDICIÓN, REPORTES E HISTORIAL (Igual que la versión anterior) ---
-        // (Las funciones cargarInventario, abrirModalEdicion, actualizarProgresoAuditoria, etc., se mantienen intactas)
-        // ...
-        
+        // --- INVENTARIO E EDICIÓN DE FOLIOS ---
         async function cargarInventario() {
             const termino = document.getElementById('search-inventario').value.toUpperCase();
             const tbody = document.querySelector('#tabla-inventario tbody');
@@ -593,7 +625,7 @@
                         <td>${fechaStr}</td>
                         <td>${d.ubicacion || '-'}</td>
                         <td><span class="badge badge-${d.estado.replace('/','-')}">${d.estado}</span></td>
-                        <td><button class="btn btn-primary btn-sm" onclick="abrirModalEdicion('${d.folio}', '${d.estado}', '${d.ubicacion||''}', '${d.lote}')">Editar</button></td>
+                        <td><button class="btn btn-primary btn-sm" onclick="abrirModalEdicion('${d.folio}', '${d.estado}', '${d.ubicacion||''}', '${d.lote}', '${d.sku_ref}')">Editar</button></td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -601,14 +633,24 @@
         }
         document.getElementById('btn-refresh-inv').addEventListener('click', cargarInventario);
 
-        window.abrirModalEdicion = (folio, estado, ubicacion, lote) => {
+        window.abrirModalEdicion = (folio, estado, ubicacion, lote, sku_ref) => {
             document.getElementById('edit-folio-title').textContent = folio;
             document.getElementById('edit-folio-id').value = folio;
             document.getElementById('edit-estado').value = estado;
             document.getElementById('edit-ubicacion').value = ubicacion;
             document.getElementById('edit-lote').value = lote;
+
+            // Cargar selector de productos para la reasignación
+            const selProd = document.getElementById('edit-producto');
+            selProd.innerHTML = '';
+            catalogoProductos.forEach(p => {
+                selProd.innerHTML += `<option value="${p.id}">${p.nombre} (${p.id})</option>`;
+            });
+            selProd.value = sku_ref;
+
             document.getElementById('modal-editar').style.display = 'flex';
         };
+        
         window.cerrarModal = () => document.getElementById('modal-editar').style.display = 'none';
 
         document.getElementById('btn-guardar-edicion').addEventListener('click', async () => {
@@ -616,17 +658,20 @@
             const estado = document.getElementById('edit-estado').value;
             const ubi = document.getElementById('edit-ubicacion').value;
             const lote = document.getElementById('edit-lote').value;
+            const sku_ref = document.getElementById('edit-producto').value; // El nuevo producto asignado
+
             try {
-                await updateDoc(doc(db, "items", folio), { estado, ubicacion: ubi, lote });
+                await updateDoc(doc(db, "items", folio), { estado, ubicacion: ubi, lote, sku_ref });
                 await addDoc(collection(db, "movimientos"), {
                     accion: "EDICION_ITEM", usuario: currentUser.email, fecha: serverTimestamp(),
-                    detalles: `Folio ${folio} actualizado. Estado: ${estado}, Ubi: ${ubi}`
+                    detalles: `Folio ${folio} actualizado. Producto: ${sku_ref}, Estado: ${estado}, Lote: ${lote}`
                 });
                 cerrarModal();
                 cargarInventario();
             } catch (e) { alert("Error guardando: " + e.message); }
         });
 
+        // --- AUDITORIA, REPORTES E HISTORIAL ---
         async function actualizarProgresoAuditoria() {
             try {
                 const q = query(collection(db, "items"), where("estado", "==", "en_almacen"));
@@ -728,4 +773,3 @@
     </script>
 </body>
 </html>
-

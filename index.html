@@ -227,7 +227,7 @@
                 let role = 'operador';
                 
                 // Creador del sistema por defecto
-                if(user.email === 'ramon@huellaglobal.com' || user.email === 'sandra@huellaglobal.com') {
+                if(user.email === 'ramon@flexowashus.com' || user.email === 'sandra@huellaglobal.com') {
                     role = 'admin';
                     await setDoc(doc(db, "usuarios", user.email), { rol: 'admin', correo: user.email });
                 } else if(userDoc.exists()) {

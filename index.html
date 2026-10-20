@@ -259,13 +259,32 @@
                 <!-- Sección: Reportes Generales -->
                 <div id="sec-reportes" class="section">
                     <div class="card no-print">
-                        <button id="btn-generar-reporte" class="btn btn-primary" style="margin-bottom: 15px;">Calcular Existencias Actuales</button>
+                        <!-- Selectores de Reporte -->
+                        <div style="display: flex; gap: 20px; border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px;">
+                            <label style="cursor:pointer;"><input type="radio" name="rep_tipo" value="existencias" checked onchange="toggleFiltrosRep()"> Reporte de Existencias (Actuales)</label>
+                            <label style="cursor:pointer;"><input type="radio" name="rep_tipo" value="movimientos" onchange="toggleFiltrosRep()"> Entradas y Salidas (Por Fecha)</label>
+                        </div>
+                        
+                        <!-- Filtro de Fechas -->
+                        <div id="filtros-fechas" style="display: none; gap: 15px; margin-bottom: 15px;">
+                            <div class="form-group" style="margin:0; flex:1;">
+                                <label>Fecha de Inicio</label>
+                                <input type="date" id="rep-inicio" class="form-control">
+                            </div>
+                            <div class="form-group" style="margin:0; flex:1;">
+                                <label>Fecha de Fin</label>
+                                <input type="date" id="rep-fin" class="form-control">
+                            </div>
+                        </div>
+
+                        <button id="btn-generar-reporte" class="btn btn-primary" style="margin-bottom: 15px;">Generar Reporte</button>
                         <button id="btn-imprimir-reporte-gral" class="btn btn-success" style="margin-bottom: 15px; margin-left: 10px; display: none;">🖨️ Imprimir PDF</button>
                     </div>
+
                     <div id="print-reporte-gral-area" class="print-area">
-                        <h2 style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px;">Reporte General de Existencias por Lote</h2>
-                        <p style="text-align: right;">Fecha de corte: <span id="report-date"></span></p>
-                        <div id="report-content">Haga clic en Calcular Existencias.</div>
+                        <h2 id="report-title-print" style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px;">Reporte de Existencias</h2>
+                        <p style="text-align: right;">Generado: <span id="report-date"></span></p>
+                        <div id="report-content">Selecciona el tipo de reporte y haz clic en "Generar Reporte".</div>
                     </div>
                 </div>
 
@@ -281,7 +300,7 @@
                     </div>
                 </div>
 
-                <!-- Sección: Catálogo de Productos (RESTAURADO AL 100%) -->
+                <!-- Sección: Catálogo de Productos -->
                 <div id="sec-catalogo" class="section">
                     <div class="grid-2">
                         <div class="card" style="margin-bottom: 0;">
@@ -377,6 +396,11 @@
         const sections = document.querySelectorAll('.section');
         const titleEl = document.getElementById('current-section-title');
 
+        window.toggleFiltrosRep = () => {
+            const tipo = document.querySelector('input[name="rep_tipo"]:checked').value;
+            document.getElementById('filtros-fechas').style.display = tipo === 'movimientos' ? 'flex' : 'none';
+        };
+
         function switchSection(targetId, title) {
             menuItems.forEach(mi => mi.classList.remove('active'));
             sections.forEach(sec => sec.classList.remove('active'));
@@ -447,14 +471,12 @@
         });
         document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
 
-        // --- LÓGICA CATÁLOGO RESTAURADA AL 100% ---
+        // --- LÓGICA CATÁLOGO ---
         async function cargarCatalogo() {
             const snap = await getDocs(collection(db, "catalogo"));
             catalogoProductos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
             renderTablaCatalogo();
 
-            // Llenar dropdown asignación
             const selProd = document.getElementById('form-producto');
             const empActual = document.getElementById('form-empresa').value;
             selProd.innerHTML = '<option value="">Seleccione...</option>';
@@ -473,15 +495,12 @@
             catalogoProductos.forEach(p => {
                 const sdsBtn = p.sds_link ? `<a href="${p.sds_link}" target="_blank" class="btn btn-primary btn-sm" style="margin-bottom:5px;">Ver SDS</a>` : '<span style="color:#999; font-size:0.8em; display:block; margin-bottom:5px;">Sin SDS</span>';
                 const peligroBadge = p.peligro ? `<span class="badge badge-peligro" style="margin-top:5px; display:inline-block;">⚠️ ${p.peligro}</span>` : '';
-                
-                tbody.innerHTML += `
-                    <tr>
+                tbody.innerHTML += `<tr>
                         <td><strong>${p.id}</strong><br><span style="color:#666;">[${p.empresa}] ${p.nombre}</span></td>
                         <td>${p.presentacion || '-'}<br><small>${p.cantidad || '-'}</small></td>
                         <td>${sdsBtn} ${peligroBadge} <br><small style="display:block; margin-top:5px;">${p.descripcion || '-'}</small></td>
                         <td><button class="btn btn-primary btn-sm" onclick="editarProductoCat('${p.id}')">Editar</button></td>
-                    </tr>
-                `;
+                    </tr>`;
             });
         }
         
@@ -490,12 +509,10 @@
         window.editarProductoCat = (sku) => {
             const prod = catalogoProductos.find(p => p.id === sku);
             if(!prod) return;
-            
             document.getElementById('cat-form-title').textContent = "Editar Producto";
             document.getElementById('cat-sku').value = prod.id;
             document.getElementById('cat-sku').setAttribute('readonly', true);
             document.getElementById('cat-sku').style.backgroundColor = '#e9ecef';
-            
             document.getElementById('cat-empresa').value = prod.empresa;
             document.getElementById('cat-nombre').value = prod.nombre;
             document.getElementById('cat-presentacion').value = prod.presentacion || '';
@@ -503,7 +520,6 @@
             document.getElementById('cat-peligro').value = prod.peligro || '';
             document.getElementById('cat-sds').value = prod.sds_link || '';
             document.getElementById('cat-descripcion').value = prod.descripcion || '';
-            
             document.getElementById('btn-save-producto').textContent = 'Actualizar Producto';
             document.getElementById('btn-save-producto').style.width = '50%';
             document.getElementById('btn-cancelar-cat').style.display = 'inline-block';
@@ -544,6 +560,7 @@
         document.getElementById('btn-generar').addEventListener('click', async () => {
             const emp = document.getElementById('form-empresa').value; const prod = document.getElementById('form-producto').value;
             const lote = document.getElementById('form-lote').value; const cant = parseInt(document.getElementById('form-cantidad').value);
+            const ubi = document.getElementById('form-ubicacion').value;
             if(!emp || !prod || !lote || cant < 1) return;
             const btn = document.getElementById('btn-generar'); btn.disabled = true; btn.textContent = "Generando...";
             try {
@@ -552,8 +569,9 @@
                 const batch = writeBatch(db);
                 for(let i=0; i<cant; i++) {
                     numActual++; const folioStr = `${emp}${numActual.toString().padStart(6, '0')}`;
-                    batch.set(doc(db, "items", folioStr), { folio: folioStr, empresa: emp, sku_ref: prod, lote: lote, estado: "en_almacen", fecha_ingreso: serverTimestamp(), auditado: false });
+                    batch.set(doc(db, "items", folioStr), { folio: folioStr, empresa: emp, sku_ref: prod, lote: lote, ubicacion: ubi, estado: "en_almacen", fecha_ingreso: serverTimestamp(), auditado: false });
                 }
+                await addDoc(collection(db, "movimientos"), { accion: "ASIGNACION_MASIVA", usuario: currentUser.email, fecha: serverTimestamp(), detalles: `Generados ${cant} folios del producto ${prod} lote ${lote}.` });
                 await batch.commit(); alert(`Guardados ${cant} ítems.`);
             } catch(e) { alert(e.message); }
             btn.disabled = false; btn.textContent = "Generar y Guardar (Enter)";
@@ -650,20 +668,63 @@
         });
         document.getElementById('btn-imprimir-auditoria').addEventListener('click', () => { document.getElementById('audit-report-date').textContent = new Date().toLocaleString(); ejecutarImpresion('print-auditoria-area'); });
 
-        // --- REPORTES E HISTORIAL ---
+        // --- REPORTES ---
         document.getElementById('btn-generar-reporte').addEventListener('click', async () => {
+            const tipo = document.querySelector('input[name="rep_tipo"]:checked').value;
             document.getElementById('report-date').textContent = new Date().toLocaleString();
-            const snap = await getDocs(query(collection(db, "items"), where("estado", "==", "en_almacen")));
-            const resumen = {};
-            snap.forEach(d => { const data = d.data(); const sku = data.sku_ref; const lote = data.lote || 'Sin Lote'; if(!resumen[sku]) resumen[sku] = {}; if(!resumen[sku][lote]) resumen[sku][lote] = 0; resumen[sku][lote]++; });
-            let html = '<table><thead><tr><th>Producto (SKU)</th><th>Lote</th><th>Unidades en Almacén</th></tr></thead><tbody>';
-            let totalGral = 0; for (const sku in resumen) { for (const lote in resumen[sku]) { html += `<tr><td>${sku}</td><td>${lote}</td><td>${resumen[sku][lote]}</td></tr>`; totalGral += resumen[sku][lote]; } }
-            html += `</tbody><tfoot><tr><th colspan="2" style="text-align:right;">Total General:</th><th>${totalGral} u.</th></tr></tfoot></table>`;
-            document.getElementById('report-content').innerHTML = html;
-            document.getElementById('btn-imprimir-reporte-gral').style.display = 'inline-block'; document.getElementById('print-reporte-gral-area').style.display = 'block';
+            const content = document.getElementById('report-content');
+            content.innerHTML = "Calculando...";
+            const titulo = document.getElementById('report-title-print');
+
+            try {
+                if(tipo === 'existencias') {
+                    titulo.textContent = "Reporte General de Existencias por Lote";
+                    const snap = await getDocs(query(collection(db, "items"), where("estado", "==", "en_almacen")));
+                    const resumen = {};
+                    snap.forEach(d => { const data = d.data(); const sku = data.sku_ref; const lote = data.lote || 'Sin Lote'; if(!resumen[sku]) resumen[sku] = {}; if(!resumen[sku][lote]) resumen[sku][lote] = 0; resumen[sku][lote]++; });
+                    let html = '<table><thead><tr><th>Producto (SKU)</th><th>Lote</th><th>Unidades en Almacén</th></tr></thead><tbody>';
+                    let totalGral = 0; for (const sku in resumen) { for (const lote in resumen[sku]) { html += `<tr><td>${sku}</td><td>${lote}</td><td>${resumen[sku][lote]}</td></tr>`; totalGral += resumen[sku][lote]; } }
+                    html += `</tbody><tfoot><tr><th colspan="2" style="text-align:right;">Total General:</th><th>${totalGral} u.</th></tr></tfoot></table>`;
+                    content.innerHTML = html;
+                } else {
+                    titulo.textContent = "Reporte de Entradas y Salidas (Movimientos)";
+                    const fInicio = document.getElementById('rep-inicio').value;
+                    const fFin = document.getElementById('rep-fin').value;
+                    if(!fInicio || !fFin) return alert("Por favor selecciona una fecha de inicio y fin.");
+
+                    const dateInicio = new Date(fInicio + "T00:00:00");
+                    const dateFin = new Date(fFin + "T23:59:59");
+
+                    const q = query(collection(db, "movimientos"),
+                        where("fecha", ">=", dateInicio),
+                        where("fecha", "<=", dateFin),
+                        orderBy("fecha", "desc")
+                    );
+                    const snap = await getDocs(q);
+
+                    let html = '<table><thead><tr><th>Fecha</th><th>Acción</th><th>Usuario</th><th>Detalles</th></tr></thead><tbody>';
+                    snap.forEach(d => {
+                        const data = d.data();
+                        const fStr = data.fecha ? data.fecha.toDate().toLocaleString() : '';
+                        html += `<tr><td>${fStr}</td><td><strong>${data.accion}</strong></td><td>${data.usuario}</td><td>${data.detalles}</td></tr>`;
+                    });
+                    html += `</tbody></table>`;
+                    
+                    let summary = `<div style="margin-bottom:20px; padding:15px; background:#f8f9fa; border-radius:8px; border: 1px solid #ddd;">
+                        <strong>Resumen del periodo:</strong><br>
+                        Se registraron <b>${snap.size}</b> movimientos en el sistema dentro de este rango de fechas.
+                    </div>`;
+
+                    content.innerHTML = summary + html;
+                }
+
+                document.getElementById('btn-imprimir-reporte-gral').style.display = 'inline-block';
+                document.getElementById('print-reporte-gral-area').style.display = 'block';
+            } catch (e) { content.innerHTML = "Error generando reporte. " + e.message; }
         });
         document.getElementById('btn-imprimir-reporte-gral').addEventListener('click', () => ejecutarImpresion('print-reporte-gral-area'));
 
+        // --- HISTORIAL ---
         async function cargarHistorial() {
             const tbody = document.querySelector('#tabla-historial tbody');
             const snap = await getDocs(query(collection(db, "movimientos"), orderBy("fecha", "desc"), limit(50)));

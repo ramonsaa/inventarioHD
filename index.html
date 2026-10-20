@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Inventario - Escritorio</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f1c40f;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --border: #bdc3c7;
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; background-color: #f4f7f6; color: #333; overflow: hidden; }
+        
+        /* Login Screen */
+        #login-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 350px; text-align: center; }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 4px; font-size: 16px; }
+        .login-box button { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+        .login-box button:hover { background: #2980b9; }
+
+        /* App Layout */
+        #app-layout { display: none; height: 100vh; width: 100vw; }
+        .sidebar { width: 250px; background-color: var(--primary); color: white; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; font-size: 1.2em; font-weight: bold; background: var(--secondary); text-align: center; border-bottom: 1px solid #1a252f; }
+        .menu-item { padding: 15px 20px; cursor: pointer; transition: 0.2s; border-left: 4px solid transparent; display: flex; align-items: center; justify-content: space-between; }
+        .menu-item:hover { background-color: var(--secondary); }
+        .menu-item.active { background-color: var(--secondary); border-left-color: var(--accent); font-weight: bold; }
+        .shortcut-hint { font-size: 0.7em; color: #95a5a6; background: #1a252f; padding: 2px 6px; border-radius: 4px; }
+        
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .content-area { padding: 20px; overflow-y: auto; flex-grow: 1; }
+        
+        /* Cards & Forms */
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; color: var(--secondary); }
+        .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; }
+        textarea.form-control { resize: vertical; min-height: 60px; }
+        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; font-size: 14px; transition: 0.2s; text-decoration: none; display: inline-block;}
+        .btn-primary { background: var(--accent); } .btn-primary:hover { background: #2980b9; }
+        .btn-success { background: var(--success); } .btn-success:hover { background: #2196f3; }
+        .btn-danger { background: var(--danger); } .btn-danger:hover { background: #c0392b; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .row { display: flex; gap: 15px; } .col { flex: 1; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; }
+        th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 1; }
+        tbody tr:hover { background-color: #f1f2f6; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
+        .badge-almacen { background: #d4edda; color: #155724; }
+        .badge-despachado { background: #cce5ff; color: #004085; }
+        .badge-destruido { background: #f8d7da; color: #721c24; }
+        .badge-peligro { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+
+        /* Progress Bar */
+        .progress-wrapper { width: 100%; background: #e0e0e0; border-radius: 8px; height: 25px; margin: 15px 0; overflow: hidden; position: relative; }
+        .progress-fill { height: 100%; background: var(--success); width: 0%; transition: width 0.3s; }
+        .progress-text { position: absolute; width: 100%; text-align: center; top: 3px; font-weight: bold; color: #333; font-size: 0.9em; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 25px; border-radius: 8px; width: 400px; max-width: 90%; }
+        
+        .section { display: none; }
+        .section.active { display: block; }
+
+        /* Print Styles */
+        @media print {
+            body * { visibility: hidden; }
+            #report-print-area, #report-print-area * { visibility: visible; }
+            #report-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Login -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2 style="color:var(--primary); margin-top:0;">HG / FW</h2>
+            <p>Sistema de Inventario</p>
+            <input type="email" id="login-email" placeholder="Correo electrónico" autofocus>
+            <input type="password" id="login-pass" placeholder="Contraseña">
+            <button id="btn-login" class="btn-primary">Ingresar (Enter)</button>
+            <p id="login-error" style="color: red; display: none; font-size: 0.9em;">Error de acceso.</p>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div id="app-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">Panel de Control</div>
+            <div class="menu-item active" data-target="sec-asignacion">Asignación <span class="shortcut-hint">Alt+1</span></div>
+            <div class="menu-item" data-target="sec-inventario">Inventario <span class="shortcut-hint">Alt+2</span></div>
+            <div class="menu-item" data-target="sec-auditoria">Auditoría <span class="shortcut-hint">Alt+3</span></div>
+            <div class="menu-item" data-target="sec-reportes">Reportes <span class="shortcut-hint">Alt+4</span></div>
+            <div class="menu-item" data-target="sec-historial">Historial <span class="shortcut-hint">Alt+5</span></div>
+            <div class="menu-item" data-target="sec-catalogo" style="border-top: 1px solid #1a252f; margin-top: 10px;">Catálogo <span class="shortcut-hint">Alt+6</span></div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="topbar">
+                <h3 id="current-section-title" style="margin:0; color:var(--primary);">Asignación de Folios</h3>
+                <div>
+                    <span id="user-display" style="margin-right: 15px; font-weight: bold; color: var(--secondary);"></span>
+                    <button id="btn-logout" class="btn btn-danger">Salir</button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                
+                <!-- Sección: Asignación -->
+                <div id="sec-asignacion" class="section active">
+                    <div class="card" style="max-width: 600px;">
+                        <h4 style="margin-top:0;">Generación Masiva de Etiquetas</h4>
+                        <div class="row">
+                            <div class="col form-group">
+                                <label>Empresa</label>
+                                <select id="form-empresa" class="form-control">
+                                    <option value="">Seleccione...</option>
+                                    <option value="FW">Flexo Wash</option>
+                                    <option value="HG">Huella Global</option>
+                                </select>
+                            </div>
+                            <div class="col form-group">
+                                <label>Producto</label>
+                                <select id="form-producto" class="form-control" disabled></select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Lote del Fabricante</label>
+                            <input type="text" id="form-lote" class="form-control" placeholder="Ej. L-102026">
+                        </div>
+                        <div class="row">
+                            <div class="col form-group">
+                                <label>Cantidad a Generar</label>
+                                <input type="number" id="form-cantidad" class="form-control" value="10" min="1" max="500">
+                            </div>
+                            <div class="col form-group">
+                                <label>Ubicación Inicial</label>
+                                <input type="text" id="form-ubicacion" class="form-control" placeholder="Ej. Rack A1">
+                            </div>
+                        </div>
+                        <button id="btn-generar" class="btn btn-success" style="width: 100%;">Generar Folios e Imprimir (Enter)</button>
+                    </div>
+                </div>
+
+                <!-- Sección: Inventario -->
+                <div id="sec-inventario" class="section">
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
+                            <div class="form-group" style="margin:0; width: 300px;">
+                                <label>Buscar (Folio, Lote, Producto)</label>
+                                <input type="text" id="search-inventario" class="form-control" placeholder="Escribe y presiona Enter...">
+                            </div>
+                            <button id="btn-refresh-inv" class="btn btn-primary">Actualizar</button>
+                        </div>
+                        <div style="max-height: 60vh; overflow-y: auto;">
+                            <table id="tabla-inventario">
+                                <thead>
+                                    <tr>
+                                        <th>Folio</th><th>Producto</th><th>Lote</th><th>Ingreso</th><th>Ubicación</th><th>Estado</th><th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Auditoría -->
+                <div id="sec-auditoria" class="section">
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h4 style="margin:0;">Control de Auditoría Física</h4>
+                            <button id="btn-iniciar-auditoria" class="btn btn-danger">Iniciar Nueva Auditoría</button>
+                        </div>
+                        
+                        <div class="progress-wrapper">
+                            <div id="audit-progress-bar" class="progress-fill"></div>
+                            <div id="audit-progress-text" class="progress-text">Progreso: 0 / 0 (0%)</div>
+                        </div>
+
+                        <div class="card" style="background: #f8f9fa; margin-top: 20px;">
+                            <label style="font-weight: bold;">Escanear Folio Físico:</label>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <input type="text" id="audit-input" class="form-control" placeholder="Lee el QR o teclea el folio y presiona Enter" style="font-size: 1.2em; max-width: 400px;">
+                                <button id="btn-audit-scan" class="btn btn-success">Confirmar</button>
+                            </div>
+                            <p id="audit-msg" style="margin-top: 10px; font-weight: bold;"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Reportes -->
+                <div id="sec-reportes" class="section">
+                    <div class="card">
+                        <button id="btn-generar-reporte" class="btn btn-primary no-print" style="margin-bottom: 15px;">Generar Reporte Actual</button>
+                        <button onclick="window.print()" class="btn btn-success no-print" style="margin-bottom: 15px; margin-left: 10px;">Imprimir PDF</button>
+                        
+                        <div id="report-print-area">
+                            <h2 style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px;">Reporte de Existencias por Lote</h2>
+                            <p style="text-align: right;">Fecha de corte: <span id="report-date"></span></p>
+                            <div id="report-content">Haga clic en Generar Reporte.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Historial -->
+                <div id="sec-historial" class="section">
+                    <div class="card">
+                        <button id="btn-refresh-hist" class="btn btn-primary" style="margin-bottom: 15px;">Actualizar Historial</button>
+                        <div style="max-height: 65vh; overflow-y: auto;">
+                            <table id="tabla-historial">
+                                <thead>
+                                    <tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalles</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Catálogo de Productos -->
+                <div id="sec-catalogo" class="section">
+                    <div class="grid-2">
+                        <!-- Formulario de Nuevo Producto -->
+                        <div class="card" style="margin-bottom: 0;">
+                            <h4 style="margin-top:0;">Agregar Producto al Catálogo</h4>
+                            
+                            <div class="form-group">
+                                <label>ID Interno / SKU</label>
+                                <input type="text" id="cat-sku" class="form-control" placeholder="Ej. FW40-5G">
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col form-group">
+                                    <label>Empresa</label>
+                                    <select id="cat-empresa" class="form-control">
+                                        <option value="FW">Flexo Wash</option>
+                                        <option value="HG">Huella Global</option>
+                                    </select>
+                                </div>
+                                <div class="col form-group">
+                                    <label>Nombre del Producto</label>
+                                    <input type="text" id="cat-nombre" class="form-control" placeholder="Ej. FW40">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col form-group">
+                                    <label>Presentación</label>
+                                    <input type="text" id="cat-presentacion" class="form-control" placeholder="Ej. Caja 5 galones">
+                                </div>
+                                <div class="col form-group">
+                                    <label>Cantidad / Volumen</label>
+                                    <input type="text" id="cat-cantidad" class="form-control" placeholder="Ej. 5 gal / 18.92L">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col form-group">
+                                    <label>Peligro / Advertencia</label>
+                                    <input type="text" id="cat-peligro" class="form-control" placeholder="Ej. Corrosivo">
+                                </div>
+                                <div class="col form-group">
+                                    <label>Link SDS (Hoja de Seguridad)</label>
+                                    <input type="url" id="cat-sds" class="form-control" placeholder="https://dropbox.com/...">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Descripción Rápida</label>
+                                <textarea id="cat-descripcion" class="form-control" placeholder="Limpiador alcalino para anilox, mezcla 50/50..."></textarea>
+                            </div>
+
+                            <button id="btn-save-producto" class="btn btn-success" style="width: 100%;">Guardar Producto</button>
+                        </div>
+
+                        <!-- Tabla de Catálogo -->
+                        <div class="card" style="margin-bottom: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h4 style="margin-top:0;">Catálogo Existente</h4>
+                                <button id="btn-refresh-cat" class="btn btn-primary btn-sm">Actualizar</button>
+                            </div>
+                            <div style="max-height: 60vh; overflow-y: auto;">
+                                <table id="tabla-catalogo">
+                                    <thead>
+                                        <tr>
+                                            <th>SKU / Nombre</th>
+                                            <th>Presentación</th>
+                                            <th>Info Técnica</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Ítem -->
+    <div id="modal-editar" class="modal-overlay">
+        <!-- ... (código del modal intacto) ... -->
+        <div class="modal">
+            <h3 style="margin-top:0;">Editar Ítem: <span id="edit-folio-title"></span></h3>
+            <input type="hidden" id="edit-folio-id">
+            <div class="form-group">
+                <label>Estado</label>
+                <select id="edit-estado" class="form-control">
+                    <option value="en_almacen">En Almacén</option>
+                    <option value="despachado">Despachado</option>
+                    <option value="destruido">Destruido/Mermado</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Ubicación</label>
+                <input type="text" id="edit-ubicacion" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Lote</label>
+                <input type="text" id="edit-lote" class="form-control">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button class="btn" onclick="cerrarModal()" style="background: #95a5a6;">Cancelar (Esc)</button>
+                <button id="btn-guardar-edicion" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Version 10 Modular) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
+        import { getFirestore, collection, doc, getDoc, getDocs, query, where, orderBy, limit, serverTimestamp, addDoc, updateDoc, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA13ZFjG31lY6y43oDjGq2sCsLCr3Ea4co",
+            authDomain: "inventario-fwhd.firebaseapp.com",
+            projectId: "inventario-fwhd",
+            storageBucket: "inventario-fwhd.firebasestorage.app",
+            messagingSenderId: "320759277573",
+            appId: "1:320759277573:web:e9d61d49ebef9a4018d46c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let catalogoProductos = [];
+
+        // UI Navigation
+        const menuItems = document.querySelectorAll('.menu-item');
+        const sections = document.querySelectorAll('.section');
+        const titleEl = document.getElementById('current-section-title');
+
+        function switchSection(targetId, title) {
+            menuItems.forEach(mi => mi.classList.remove('active'));
+            sections.forEach(sec => sec.classList.remove('active'));
+            document.querySelector(`[data-target="${targetId}"]`).classList.add('active');
+            document.getElementById(targetId).classList.add('active');
+            titleEl.textContent = title;
+
+            // Trigger specific loads
+            if(targetId === 'sec-inventario') cargarInventario();
+            if(targetId === 'sec-historial') cargarHistorial();
+            if(targetId === 'sec-auditoria') actualizarProgresoAuditoria();
+            if(targetId === 'sec-catalogo') renderTablaCatalogo();
+        }
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => switchSection(item.dataset.target, item.childNodes[0].textContent.trim()));
+        });
+
+        // Global Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') cerrarModal();
+            
+            // Tab Navigation (Alt + 1-6)
+            if (e.altKey) {
+                const tabs = ['sec-asignacion', 'sec-inventario', 'sec-auditoria', 'sec-reportes', 'sec-historial', 'sec-catalogo'];
+                const titles = ['Asignación de Folios', 'Inventario', 'Auditoría', 'Reportes', 'Historial', 'Catálogo de Productos'];
+                const index = parseInt(e.key) - 1;
+                if (index >= 0 && index < tabs.length) {
+                    e.preventDefault();
+                    switchSection(tabs[index], titles[index]);
+                }
+            }
+
+            if (e.key === 'Enter') {
+                if (document.getElementById('login-screen').style.display !== 'none') {
+                    document.getElementById('btn-login').click();
+                } else if (document.getElementById('modal-editar').style.display === 'flex') {
+                    document.getElementById('btn-guardar-edicion').click();
+                } else if (document.activeElement.id === 'search-inventario') {
+                    document.getElementById('btn-refresh-inv').click();
+                } else if (document.activeElement.id === 'audit-input') {
+                    document.getElementById('btn-audit-scan').click();
+                }
+            }
+        });
+
+        // Auth Logic
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-layout').style.display = 'flex';
+                document.getElementById('user-display').textContent = user.email;
+                await cargarCatalogo();
+                cargarInventario();
+            } else {
+                currentUser = null;
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('app-layout').style.display = 'none';
+            }
+        });
+
+        document.getElementById('btn-login').addEventListener('click', async () => {
+            try {
+                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value);
+            } catch (e) {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        });
+        document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
+
+        // --- MÓDULO CATÁLOGO ---
+        async function cargarCatalogo() {
+            const snap = await getDocs(collection(db, "catalogo"));
+            catalogoProductos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderTablaCatalogo();
+        }
+
+        function renderTablaCatalogo() {
+            const tbody = document.querySelector('#tabla-catalogo tbody');
+            tbody.innerHTML = '';
+            catalogoProductos.forEach(p => {
+                const sdsBtn = p.sds_link ? `<a href="${p.sds_link}" target="_blank" class="btn btn-primary btn-sm">Ver SDS</a>` : '<span style="color:#999; font-size:0.8em;">Sin SDS</span>';
+                const peligroBadge = p.peligro ? `<br><span class="badge badge-peligro">⚠️ ${p.peligro}</span>` : '';
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${p.id}</strong><br><span style="color:#666;">[${p.empresa}] ${p.nombre}</span></td>
+                        <td>${p.presentacion}<br><small>${p.cantidad}</small></td>
+                        <td>${sdsBtn} ${peligroBadge} <br><small style="display:block; margin-top:5px;">${p.descripcion}</small></td>
+                    </tr>
+                `;
+            });
+            // Reset dropdown to force reload if in Asignación
+            document.getElementById('form-empresa').dispatchEvent(new Event('change'));
+        }
+
+        document.getElementById('btn-refresh-cat').addEventListener('click', cargarCatalogo);
+
+        document.getElementById('btn-save-producto').addEventListener('click', async () => {
+            const sku = document.getElementById('cat-sku').value.trim().toUpperCase();
+            if(!sku) return alert("El ID Interno (SKU) es obligatorio.");
+
+            const prodData = {
+                empresa: document.getElementById('cat-empresa').value,
+                nombre: document.getElementById('cat-nombre').value.trim(),
+                presentacion: document.getElementById('cat-presentacion').value.trim(),
+                cantidad: document.getElementById('cat-cantidad').value.trim(),
+                peligro: document.getElementById('cat-peligro').value.trim(),
+                sds_link: document.getElementById('cat-sds').value.trim(),
+                descripcion: document.getElementById('cat-descripcion').value.trim()
+            };
+
+            try {
+                await setDoc(doc(db, "catalogo", sku), prodData);
+                await addDoc(collection(db, "movimientos"), {
+                    accion: "ALTA_PRODUCTO", usuario: currentUser.email, fecha: serverTimestamp(),
+                    detalles: `Producto agregado/actualizado en catálogo: ${sku} (${prodData.nombre})`
+                });
+                alert("Producto guardado exitosamente en el catálogo.");
+                
+                // Clear form
+                document.querySelectorAll('#sec-catalogo input, #sec-catalogo textarea').forEach(el => el.value = '');
+                
+                await cargarCatalogo(); // Refresh data
+            } catch (e) {
+                alert("Error guardando producto: " + e.message);
+            }
+        });
+
+        // --- ASIGNACIÓN DROPDOWN ---
+        document.getElementById('form-empresa').addEventListener('change', (e) => {
+            const emp = e.target.value;
+            const selProd = document.getElementById('form-producto');
+            selProd.innerHTML = '<option value="">Seleccione...</option>';
+            if(emp) {
+                selProd.disabled = false;
+                catalogoProductos.filter(p => p.empresa === emp).forEach(p => {
+                    selProd.innerHTML += `<option value="${p.id}">${p.nombre} (${p.presentacion})</option>`;
+                });
+            } else {
+                selProd.disabled = true;
+            }
+        });
+
+        // --- ASIGNACIÓN LÓGICA ---
+        document.getElementById('btn-generar').addEventListener('click', async () => {
+            const emp = document.getElementById('form-empresa').value;
+            const prod = document.getElementById('form-producto').value;
+            const lote = document.getElementById('form-lote').value;
+            const cant = parseInt(document.getElementById('form-cantidad').value);
+            const ubi = document.getElementById('form-ubicacion').value;
+
+            if(!emp || !prod || !lote || cant < 1) return alert("Completa los datos necesarios.");
+
+            const btn = document.getElementById('btn-generar');
+            btn.disabled = true; btn.textContent = "Generando...";
+
+            try {
+                const q = query(collection(db, "items"), where("empresa", "==", emp), orderBy("folio", "desc"), limit(1));
+                const snap = await getDocs(q);
+                let numActual = snap.empty ? 0 : parseInt(snap.docs[0].id.substring(2));
+
+                const batch = writeBatch(db); 
+                let primerFolio, ultimoFolio;
+
+                for(let i=0; i<cant; i++) {
+                    numActual++;
+                    const folioStr = `${emp}${numActual.toString().padStart(6, '0')}`;
+                    if(i===0) primerFolio = folioStr;
+                    if(i===cant-1) ultimoFolio = folioStr;
+
+                    const docRef = doc(db, "items", folioStr);
+                    batch.set(docRef, {
+                        folio: folioStr, empresa: emp, sku_ref: prod, lote: lote, ubicacion: ubi,
+                        estado: "en_almacen", fecha_ingreso: serverTimestamp(), auditado: false
+                    });
+                }
+
+                const logRef = doc(collection(db, "movimientos"));
+                batch.set(logRef, {
+                    accion: "ASIGNACION_MASIVA", usuario: currentUser.email, fecha: serverTimestamp(),
+                    detalles: `Generados ${cant} folios (${primerFolio} a ${ultimoFolio}) del producto ${prod} lote ${lote}.`
+                });
+
+                await batch.commit();
+                alert(`¡Éxito! Folios del ${primerFolio} al ${ultimoFolio} generados.`);
+                document.getElementById('form-lote').value = '';
+                
+            } catch (e) { alert("Error: " + e.message); } 
+            finally { btn.disabled = false; btn.textContent = "Generar Folios e Imprimir (Enter)"; }
+        });
+
+        // --- INVENTARIO, AUDITORIA, EDICIÓN, REPORTES E HISTORIAL (Igual que la versión anterior) ---
+        // (Las funciones cargarInventario, abrirModalEdicion, actualizarProgresoAuditoria, etc., se mantienen intactas)
+        // ...
+        
+        async function cargarInventario() {
+            const termino = document.getElementById('search-inventario').value.toUpperCase();
+            const tbody = document.querySelector('#tabla-inventario tbody');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Cargando...</td></tr>';
+            try {
+                let q = query(collection(db, "items"), orderBy("folio", "desc"), limit(100));
+                const snap = await getDocs(q);
+                tbody.innerHTML = '';
+                snap.forEach(docSnap => {
+                    const d = docSnap.data();
+                    if(termino && !d.folio.includes(termino) && !d.lote.includes(termino) && !d.sku_ref.includes(termino)) return;
+                    const dateObj = d.fecha_ingreso ? d.fecha_ingreso.toDate() : new Date();
+                    const fechaStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${d.folio}</strong></td>
+                        <td>${d.sku_ref}</td>
+                        <td>${d.lote}</td>
+                        <td>${fechaStr}</td>
+                        <td>${d.ubicacion || '-'}</td>
+                        <td><span class="badge badge-${d.estado.replace('/','-')}">${d.estado}</span></td>
+                        <td><button class="btn btn-primary btn-sm" onclick="abrirModalEdicion('${d.folio}', '${d.estado}', '${d.ubicacion||''}', '${d.lote}')">Editar</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) { console.error(e); }
+        }
+        document.getElementById('btn-refresh-inv').addEventListener('click', cargarInventario);
+
+        window.abrirModalEdicion = (folio, estado, ubicacion, lote) => {
+            document.getElementById('edit-folio-title').textContent = folio;
+            document.getElementById('edit-folio-id').value = folio;
+            document.getElementById('edit-estado').value = estado;
+            document.getElementById('edit-ubicacion').value = ubicacion;
+            document.getElementById('edit-lote').value = lote;
+            document.getElementById('modal-editar').style.display = 'flex';
+        };
+        window.cerrarModal = () => document.getElementById('modal-editar').style.display = 'none';
+
+        document.getElementById('btn-guardar-edicion').addEventListener('click', async () => {
+            const folio = document.getElementById('edit-folio-id').value;
+            const estado = document.getElementById('edit-estado').value;
+            const ubi = document.getElementById('edit-ubicacion').value;
+            const lote = document.getElementById('edit-lote').value;
+            try {
+                await updateDoc(doc(db, "items", folio), { estado, ubicacion: ubi, lote });
+                await addDoc(collection(db, "movimientos"), {
+                    accion: "EDICION_ITEM", usuario: currentUser.email, fecha: serverTimestamp(),
+                    detalles: `Folio ${folio} actualizado. Estado: ${estado}, Ubi: ${ubi}`
+                });
+                cerrarModal();
+                cargarInventario();
+            } catch (e) { alert("Error guardando: " + e.message); }
+        });
+
+        async function actualizarProgresoAuditoria() {
+            try {
+                const q = query(collection(db, "items"), where("estado", "==", "en_almacen"));
+                const snap = await getDocs(q);
+                let total = snap.size; let auditados = 0;
+                snap.forEach(d => { if(d.data().auditado) auditados++; });
+                const pct = total === 0 ? 0 : Math.round((auditados / total) * 100);
+                document.getElementById('audit-progress-bar').style.width = `${pct}%`;
+                document.getElementById('audit-progress-text').textContent = `Progreso: ${auditados} / ${total} (${pct}%)`;
+            } catch (e) { console.error(e); }
+        }
+
+        document.getElementById('btn-iniciar-auditoria').addEventListener('click', async () => {
+            if(!confirm("¿Seguro? Esto marcará todo el almacén como 'No auditado'.")) return;
+            try {
+                const q = query(collection(db, "items"), where("estado", "==", "en_almacen"));
+                const snap = await getDocs(q);
+                let batch = writeBatch(db); let count = 0;
+                for (const d of snap.docs) {
+                    batch.update(d.ref, { auditado: false });
+                    count++;
+                    if (count % 490 === 0) { await batch.commit(); batch = writeBatch(db); }
+                }
+                await batch.commit();
+                await addDoc(collection(db, "movimientos"), {
+                    accion: "INICIO_AUDITORIA", usuario: currentUser.email, fecha: serverTimestamp(), detalles: "Reinicio de auditoría."
+                });
+                actualizarProgresoAuditoria();
+                alert("Auditoría iniciada.");
+            } catch (e) { alert("Error: "+e.message); }
+        });
+
+        document.getElementById('btn-audit-scan').addEventListener('click', async () => {
+            const input = document.getElementById('audit-input');
+            const folio = input.value.trim().toUpperCase();
+            const msgEl = document.getElementById('audit-msg');
+            if(!folio) return;
+            try {
+                const docRef = doc(db, "items", folio);
+                const docSnap = await getDoc(docRef);
+                if(docSnap.exists()) {
+                    const data = docSnap.data();
+                    if(data.estado !== 'en_almacen') { msgEl.textContent = `Error: Folio despachado/destruido.`; msgEl.style.color = "red"; }
+                    else if(data.auditado) { msgEl.textContent = `Aviso: Ya escaneado.`; msgEl.style.color = "orange"; }
+                    else {
+                        await updateDoc(docRef, { auditado: true });
+                        msgEl.textContent = `¡Confirmado!`; msgEl.style.color = "green";
+                        actualizarProgresoAuditoria();
+                    }
+                } else { msgEl.textContent = `Error: No existe.`; msgEl.style.color = "red"; }
+            } catch(e) { console.error(e); }
+            input.value = ''; input.focus();
+        });
+
+        document.getElementById('btn-generar-reporte').addEventListener('click', async () => {
+            document.getElementById('report-date').textContent = new Date().toLocaleString();
+            const content = document.getElementById('report-content');
+            content.innerHTML = "Calculando...";
+            try {
+                const q = query(collection(db, "items"), where("estado", "==", "en_almacen"));
+                const snap = await getDocs(q);
+                const resumen = {};
+                snap.forEach(d => {
+                    const data = d.data(); const sku = data.sku_ref; const lote = data.lote || 'Sin Lote';
+                    if(!resumen[sku]) resumen[sku] = {};
+                    if(!resumen[sku][lote]) resumen[sku][lote] = 0;
+                    resumen[sku][lote]++;
+                });
+                let html = '<table><thead><tr><th>Producto (SKU)</th><th>Lote</th><th>Unidades en Almacén</th></tr></thead><tbody>';
+                let totalGral = 0;
+                for (const sku in resumen) {
+                    for (const lote in resumen[sku]) {
+                        html += `<tr><td>${sku}</td><td>${lote}</td><td>${resumen[sku][lote]}</td></tr>`;
+                        totalGral += resumen[sku][lote];
+                    }
+                }
+                html += `</tbody><tfoot><tr><th colspan="2" style="text-align:right;">Total:</th><th>${totalGral} u.</th></tr></tfoot></table>`;
+                content.innerHTML = html;
+            } catch (e) { content.innerHTML = "Error generando reporte."; }
+        });
+
+        async function cargarHistorial() {
+            const tbody = document.querySelector('#tabla-historial tbody');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Cargando...</td></tr>';
+            try {
+                const q = query(collection(db, "movimientos"), orderBy("fecha", "desc"), limit(50));
+                const snap = await getDocs(q);
+                tbody.innerHTML = '';
+                snap.forEach(docSnap => {
+                    const d = docSnap.data();
+                    const dateObj = d.fecha ? d.fecha.toDate() : new Date();
+                    const fechaStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    tbody.innerHTML += `<tr><td>${fechaStr}</td><td>${d.usuario}</td><td><strong>${d.accion}</strong></td><td>${d.detalles}</td></tr>`;
+                });
+            } catch (e) { console.error(e); }
+        }
+        document.getElementById('btn-refresh-hist').addEventListener('click', cargarHistorial);
+
+    </script>
+</body>
+</html>
